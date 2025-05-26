@@ -6,14 +6,14 @@ A demo e-commerce web application built with **Node.js**, **Express**, and **EJS
 
 ## 🏷️ Branches
 
-* **vulnerable**: Contains intentional security flaws:
+* **nonVulnerable**: Contains patched verson from intentional security flaws:
 
   * SQL Injection on Sign-Up & Sign-In
   * Reflected Cross-Site Scripting (XSS)
   * Cross-Site Request Forgery (CSRF)
   * Plain-text password storage, missing rate limits, and no security headers
 
-* **patched**: All vulnerabilities have been fixed:
+* **Main**: All vulnerabilities have been fixed:
 
   * Parameterized SQL queries (`?` placeholders)
   * Escaped template output (`<%= … %>`)
@@ -34,18 +34,18 @@ A demo e-commerce web application built with **Node.js**, **Express**, and **EJS
 1. **Clone** this repo:
 
    ```bash
-   git clone https://github.com/yourusername/cybershop.git
-   cd cybershop
+   git clone https://github.com/HazemBelal/CS_VulnerableSiteProject.git
+   cd CS_VulnerableSiteProject
    ```
 
 2. **Checkout** the branch you want:
 
    ```bash
    # For vulnerable version
-   git checkout vulnerable
+   git checkout main
 
    # Or for patched version
-   git checkout patched
+   git checkout nonVulenrable
    ```
 
 3. **Install** dependencies:
@@ -56,7 +56,40 @@ A demo e-commerce web application built with **Node.js**, **Express**, and **EJS
 
 4. **Configure** your database in `config.js` (default: MySQL at `localhost:3306`, user `cybershop`, password `cs288`).
 
-5. **Set up DB** (using Docker or native) and run the schema scripts in `db/schema.sql`.
+5. **Set up DB** (using Docker or native) and create the schema for example in docker:
+   ```bash
+   docker exec cyber-mysql mysql -ucybershop -pcs288 -D cybershop -e "
+   CREATE TABLE users (
+   id INT AUTO_INCREMENT PRIMARY KEY,
+   username VARCHAR(50) UNIQUE,
+   password VARCHAR(64),
+   email VARCHAR(100),
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+   CREATE TABLE products (
+   id INT AUTO_INCREMENT PRIMARY KEY,
+   name VARCHAR(100),
+   description TEXT,
+   price DECIMAL(10,2),
+   image_path VARCHAR(255)
+   );
+   CREATE TABLE carts (
+   id INT AUTO_INCREMENT PRIMARY KEY,
+   user_id INT,
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   FOREIGN KEY (user_id) REFERENCES users(id)
+   );
+   CREATE TABLE cart_items (
+   id INT AUTO_INCREMENT PRIMARY KEY,
+   cart_id INT,
+   product_id INT,
+   quantity INT,
+   FOREIGN KEY (cart_id) REFERENCES carts(id),
+   FOREIGN KEY (product_id) REFERENCES products(id)
+   );
+   "
+
+   ```
 
 6. **Start** the server:
 
@@ -103,4 +136,4 @@ A demo e-commerce web application built with **Node.js**, **Express**, and **EJS
 
 ## 📚 License
 
-MIT © Hazem Belal
+MIT © Hazem Belal and Youssef Alaadin
