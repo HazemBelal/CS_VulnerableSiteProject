@@ -111,25 +111,28 @@
     button.addEventListener('click', async (e) => {
       const action = e.target.getAttribute('data-action');
       const itemId = e.target.getAttribute('data-item-id');
-      const input = e.target.parentElement.querySelector('.quantity-input');
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
       
       try {
         const response = await fetch(`/cart/update/${itemId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'CSRF-Token': csrfToken
           },
+          credentials: 'include',
           body: JSON.stringify({ action })
         });
         
         if (response.ok) {
-          const data = await response.json();
-          input.value = data.newQuantity;
-          // You might want to update the total prices here
-          location.reload(); // Simple refresh for demo
+          location.reload();
+        } else {
+          const error = await response.text();
+          throw new Error(error);
         }
       } catch (error) {
         console.error('Error:', error);
+        alert('Failed to update quantity: ' + error.message);
       }
     });
   });
@@ -137,20 +140,37 @@
   // Remove item
   document.querySelectorAll('.remove-item').forEach(button => {
     button.addEventListener('click', async (e) => {
-      const itemId = e.target.getAttribute('data-item-id');
+      e.preventDefault();
+      const itemId = button.getAttribute('data-item-id');
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+      
+      if (!confirm('Are you sure you want to remove this item?')) return;
       
       try {
         const response = await fetch(`/cart/remove/${itemId}`, {
-          method: 'POST'
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'CSRF-Token': csrfToken
+          },
+          credentials: 'include'
         });
         
         if (response.ok) {
-          // Remove the item from DOM or refresh
           location.reload();
+        } else {
+          const error = await response.text();
+          throw new Error(error);
         }
       } catch (error) {
         console.error('Error:', error);
+        alert('Failed to remove item: ' + error.message);
       }
     });
+  });
+
+  // Checkout button
+  document.getElementById('checkout-btn')?.addEventListener('click', () => {
+    window.location.href = '/checkout';
   });
   </script>
