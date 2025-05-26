@@ -31,106 +31,94 @@ router.get('/catalog', async (req, res) => {
 
 // Cart routes
 router.get('/cart', async (req, res) => {
-  if (!req.session.userId) {
-    return res.redirect('/signin');
-  }
+    const userId = req.session.userId;
+    if (!userId) return res.redirect('/signin');
   
-  try {
-    // Get user's cart
-    const [cart] = await db.query(
-      'SELECT * FROM carts WHERE user_id = ?', 
-      [req.session.userId]
+    // 1) Fetch all cart items + product data in one go
+    const [rows] = await db.query(`
+      SELECT
+        ci.id             AS id,
+        ci.quantity       AS quantity,
+        p.id              AS productId,
+        p.name            AS name,
+        p.description     AS description,
+        p.price           AS price,
+        p.image_path      AS image_path
+      FROM carts c
+      JOIN cart_items ci ON c.id = ci.cart_id
+      JOIN products p   ON ci.product_id = p.id
+      WHERE c.user_id = ?
+    `, [userId]);
+  
+    // 2) Nest product fields under item.product
+    const cartItems = rows.map(r => ({
+      id:        r.id,
+      quantity:  r.quantity,
+      product: {
+        id:           r.productId,
+        name:         r.name,
+        description:  r.description,
+        price:        r.price,
+        image_path:   r.image_path
+      }
+    }));
+  
+    // 3) Compute subtotal
+    const subtotal = cartItems.reduce((sum, { product: p, quantity }) => 
+      sum + p.price * quantity, 0
     );
-    
-    if (cart.length === 0) {
-      return res.render('cart', { 
-        cartItems: [], 
-        subtotal: 0,
-        user: req.session.userId
-      });
-    }
-    
-    // Get cart items with product details
-    const [cartItems] = await db.query(`
-      SELECT ci.id, ci.quantity, p.id as product_id, p.name, p.description, p.price, p.image_path
-      FROM cart_items ci
-      JOIN products p ON ci.product_id = p.id
-      WHERE ci.cart_id = ?
-    `, [cart[0].id]);
-    
-    // Calculate subtotal
-    const subtotal = cartItems.reduce((sum, item) => {
-      return sum + (parseFloat(item.price) * item.quantity);
-    }, 0);
-    
-    res.render('cart', { 
-      cartItems, 
-      subtotal,
-      user: req.session.userId
-    });
-  } catch (error) {
-    console.error('Error loading cart:', error);
-    res.status(500).send('Error loading cart');
-  }
-});
+  
+    return res.render('cart', { cartItems, subtotal });
+  });
+  
 
+// POST /cart/add
 router.post('/cart/add', async (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
+    try {
+      const { productId, quantity } = req.body;  // bodyParser.json() must be enabled
   
-  const { productId, quantity } = req.body;
+      // 1) Ensure user is logged in
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
   
-  try {
-    // Find or create cart for user
-    const [cart] = await db.query(
-      'SELECT id FROM carts WHERE user_id = ?', 
-      [req.session.userId]
-    );
-    
-    let cartId;
-    if (cart.length === 0) {
-      const [result] = await db.query(
-        'INSERT INTO carts (user_id) VALUES (?)',
-        [req.session.userId]
+      // 2) Get or create cart
+      const [[ cartRow ]] = await db.query(
+        'SELECT id FROM carts WHERE user_id = ?', [userId]
       );
-      cartId = result.insertId;
-    } else {
-      cartId = cart[0].id;
-    }
-    
-    // Check if product already in cart
-    const [existing] = await db.query(
-      'SELECT id, quantity FROM cart_items WHERE cart_id = ? AND product_id = ?',
-      [cartId, productId]
-    );
-    
-    if (existing.length > 0) {
-      // Update quantity
+      let cartId;
+      if (cartRow) {
+        cartId = cartRow.id;
+      } else {
+        const [ result ] = await db.query(
+          'INSERT INTO carts (user_id) VALUES (?)', [userId]
+        );
+        cartId = result.insertId;
+      }
+  
+      // 3) Add item (or update quantity)
       await db.query(
-        'UPDATE cart_items SET quantity = quantity + ? WHERE id = ?',
-        [quantity, existing[0].id]
-      );
-    } else {
-      // Add new item
-      await db.query(
-        'INSERT INTO cart_items (cart_id, product_id, quantity) VALUES (?, ?, ?)',
+        `INSERT INTO cart_items (cart_id, product_id, quantity)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           quantity = quantity + VALUES(quantity)`,
         [cartId, productId, quantity]
       );
+  
+      // 4) Count total items in cart
+      const [[{ count }]] = await db.query(
+        'SELECT SUM(quantity) AS count FROM cart_items WHERE cart_id = ?',
+        [cartId]
+      );
+  
+      // 5) Return JSON
+      return res.json({ cartCount: count });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Server error' });
     }
-    
-    // Get updated cart count
-    const [[{ count }]] = await db.query(
-      'SELECT SUM(quantity) as count FROM cart_items WHERE cart_id = ?',
-      [cartId]
-    );
-    
-    res.json({ success: true, cartCount: count || 0 });
-  } catch (error) {
-    console.error('Error adding to cart:', error);
-    res.status(500).json({ error: 'Failed to add to cart' });
-  }
-});
+  });
 
 // Checkout stub
 router.get('/checkout', (req, res) => {

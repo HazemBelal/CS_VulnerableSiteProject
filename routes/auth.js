@@ -27,18 +27,30 @@ router.get('/signin', (req, res) => {
 
 // POST signin (no password hashing; XSS in error)
 router.post('/signin', async (req, res) => {
-  const { username, password } = req.body;
-  const [rows] = await db.query(
-    `SELECT * FROM users 
-     WHERE username='${username}' AND password='${password}'`
-  );
-  if (rows.length) {
-    req.session.userId = rows[0].id;
-    return res.redirect('/catalog');
-  }
-  // error rendered raw: reflected XSS
-  res.render('signin', { error: 'Invalid credentials for '+ username });
-});
+    const { username, password } = req.body;
+  
+    try {
+      // Perform the (vulnerable) SQL query
+      const [rows] = await db.query(
+        `SELECT * FROM users 
+         WHERE username='${username}' AND password='${password}'`
+      );
+  
+      if (rows.length) {
+        // Successful login
+        req.session.userId = rows[0].id;
+        return res.redirect('/catalog');
+      }
+  
+      // Failed login — trigger reflected XSS if username contains <script>…
+      return res.render('signin', { error: `Invalid credentials for ${username}` });
+    } 
+    catch (err) {               // <-- Make sure you capture the exception here
+      console.error(err);
+      // Show the raw SQL error (unescaped) for XSS demo
+      return res.render('signin', { error: err.message });
+    }
+  });
 
 // Logout
 router.get('/logout', (req, res) => {

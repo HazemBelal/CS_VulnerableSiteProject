@@ -1,11 +1,10 @@
 // app.js
-const express            = require('express');
-const expressLayouts     = require('express-ejs-layouts');
-const path               = require('path');
-const bodyParser         = require('body-parser');
-const cookieParser       = require('cookie-parser');
-const session            = require('express-session');
-const { session: cfg }   = require('./config');
+const express        = require('express');
+const expressLayouts = require('express-ejs-layouts');
+const path           = require('path');
+const cookieParser   = require('cookie-parser');
+const session        = require('express-session');
+const { session: cfg } = require('./config');
 
 const authRoutes = require('./routes/auth');
 const shopRoutes = require('./routes/shop');
@@ -21,11 +20,12 @@ app.set('layout', 'partials/layout');
 // 2) Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 3) Body & cookie parsers
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
+// 3) Body parsers
+app.use(express.urlencoded({ extended: false }));  // for HTML forms
+app.use(express.json());                            // for JSON (fetch)
 
-// 4) Sessions
+// 4) Cookie parser & Sessions
+app.use(cookieParser());
 app.use(session({
   secret:            cfg.secret,
   resave:            cfg.resave,
