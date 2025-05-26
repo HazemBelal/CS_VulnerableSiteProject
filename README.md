@@ -6,14 +6,14 @@ A demo e-commerce web application built with **Node.js**, **Express**, and **EJS
 
 ## 🏷️ Branches
 
-* **nonVulnerable**: Contains patched verson from intentional security flaws:
+* **Patched**: Contains patched verson from intentional security flaws:
 
   * SQL Injection on Sign-Up & Sign-In
   * Reflected Cross-Site Scripting (XSS)
   * Cross-Site Request Forgery (CSRF)
   * Plain-text password storage, missing rate limits, and no security headers
 
-* **Main**: All vulnerabilities have been fixed:
+* **Vulnerable**: All vulnerabilities have been fixed:
 
   * Parameterized SQL queries (`?` placeholders)
   * Escaped template output (`<%= … %>`)
