@@ -10,11 +10,12 @@
             <div class="auth-card-body">
               <% if (error) { %>
                 <div class="alert alert-danger text-center">
-                  <%- error %>
+                  <%= error %>
                 </div>
               <% } %>
   
               <form action="/signin" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <div class="mb-3">
                   <label for="username" class="form-label">Username</label>
                   <input id="username"

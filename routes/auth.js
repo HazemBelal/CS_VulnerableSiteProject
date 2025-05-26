@@ -11,9 +11,10 @@ router.get('/signup', (req, res) => {
 router.post('/signup', async (req, res) => {
   const { username, password, email } = req.body;
   try {
-    const sql = `INSERT INTO users (username,password,email)
-                 VALUES ('${username}','${password}','${email}')`;
-    await db.query(sql);
+   await db.query(
+    'INSERT INTO users (username,password,email) VALUES (?,?,?)',
+    [username, password, email]
+    );
     res.redirect('/signin');
   } catch (err) {
     res.render('signup', { error: err.message });
@@ -30,10 +31,10 @@ router.post('/signin', async (req, res) => {
     const { username, password } = req.body;
   
     try {
-      // Perform the (vulnerable) SQL query
-      const [rows] = await db.query(
-        `SELECT * FROM users 
-         WHERE username='${username}' AND password='${password}'`
+// Perform the (vulnerable) SQL query
+        const [rows] = await db.query(
+        'SELECT id FROM users WHERE username = ? AND password = ?',
+        [username, password]
       );
   
       if (rows.length) {

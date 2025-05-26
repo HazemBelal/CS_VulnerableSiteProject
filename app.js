@@ -2,6 +2,7 @@
 const express        = require('express');
 const expressLayouts = require('express-ejs-layouts');
 const path           = require('path');
+const csurf          = require('csurf');
 const cookieParser   = require('cookie-parser');
 const session        = require('express-session');
 const { session: cfg } = require('./config');
@@ -32,7 +33,14 @@ app.use(session({
   saveUninitialized: cfg.saveUninitialized,
   cookie:            cfg.cookie
 }));
+// 4b) CSRF middleware (must come _after_ cookie/session)
+app.use(csurf({ cookie: true }));
 
+// Expose CSRF token to all views
+app.use((req, res, next) => {
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
 // 5) Expose current user to all views
 app.use((req, res, next) => {
   res.locals.user = req.session.userId || null;
