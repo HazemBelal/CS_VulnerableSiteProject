@@ -1,7 +1,7 @@
 // config.js
 module.exports = {
     db: {
-      host:     'localhost',
+      host:     'cybershop.ch8wy06qw6yz.eu-north-1.rds.amazonaws.com',
       user:     'cybershop',    // MySQL user
       password: 'cs288',        // MySQL password
       database: 'cybershop',    // database name
