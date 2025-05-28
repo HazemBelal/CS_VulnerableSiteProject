@@ -1,8 +1,6 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -e
 
-# 1) Go to the app directory
-cd /home/ec2-user/CS_VulnerableSiteProject
-
-# 2) Install dependencies
+APPDIR=/home/ec2-user/CS_VulnerableSiteProject
+cd "$APPDIR"
 npm install
