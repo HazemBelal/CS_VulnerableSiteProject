@@ -1,5 +1,10 @@
-# scripts/start_server.sh
-#!/bin/bash
-cd /home/ec2-user/CS_VulnerableSiteProject
-npm install     # in case package.json changed
-pm2 start app.js --name cs_vulnerablesiteproject
+#!/usr/bin/env bash
+set -e
+
+APP_DIR=/home/ec2-user/CS_VulnerableSiteProject
+PROC_NAME=cs_vulnerablesiteproject
+
+cd "$APP_DIR"
+
+# Try restarting; if that fails, start it fresh
+pm2 restart "$PROC_NAME" || pm2 start app.js --name "$PROC_NAME"

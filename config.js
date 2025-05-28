@@ -3,7 +3,7 @@ module.exports = {
     db: {
       host:     'cybershop.ch8wy06qw6yz.eu-north-1.rds.amazonaws.com',
       user:     'cybershop',    // MySQL user
-      password: 'cs288',        // MySQL password
+      password: 'Hazem2040',        // MySQL password
       database: 'cybershop',    // database name
       port:     3306            // optional, defaults to 3306
     },
