@@ -6,13 +6,11 @@ PROC_NAME=cs_vulnerablesiteproject
 
 cd "$APP_DIR"
 
-# 1) Delete _all_ old processes with that name (repeat until none left)
-while pm2 delete "$PROC_NAME" &>/dev/null; do
-  echo "Deleted an old $PROC_NAME process..."
-done
+# 1) Wipe out every PM2 process, regardless of name
+pm2 delete all || true
 
-# 2) Now start exactly one fresh process
+# 2) Start your app cleanly
 pm2 start app.js --name "$PROC_NAME"
 
-# 3) Persist for restart on reboot
+# 3) Persist the process list
 pm2 save
