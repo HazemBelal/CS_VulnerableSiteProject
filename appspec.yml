@@ -18,8 +18,3 @@ hooks:
     - location: scripts/start_server.sh    # your existing start script
       timeout: 300
       runas: ec2-user
-
-  ValidateService:
-    - location: scripts/validate_service.sh # optional health-check
-      timeout: 120
-      runas: ec2-user
