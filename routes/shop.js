@@ -75,18 +75,20 @@ router.get('/cart', async (req, res) => {
 // POST /cart/add
 router.post('/cart/add', async (req, res) => {
     try {
-      const { productId, quantity } = req.body;  // bodyParser.json() must be enabled
-  
-      // 1) Ensure user is logged in
+      // Verify CSRF token automatically handled by middleware
+      
+      const { productId, quantity } = req.body;
       const userId = req.session.userId;
+      
       if (!userId) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
   
-      // 2) Get or create cart
+      // Rest of your cart logic...
       const [[ cartRow ]] = await db.query(
         'SELECT id FROM carts WHERE user_id = ?', [userId]
       );
+      
       let cartId;
       if (cartRow) {
         cartId = cartRow.id;
@@ -97,7 +99,6 @@ router.post('/cart/add', async (req, res) => {
         cartId = result.insertId;
       }
   
-      // 3) Add item (or update quantity)
       await db.query(
         `INSERT INTO cart_items (cart_id, product_id, quantity)
          VALUES (?, ?, ?)
@@ -106,19 +107,22 @@ router.post('/cart/add', async (req, res) => {
         [cartId, productId, quantity]
       );
   
-      // 4) Count total items in cart
       const [[{ count }]] = await db.query(
         'SELECT SUM(quantity) AS count FROM cart_items WHERE cart_id = ?',
         [cartId]
       );
   
-      // 5) Return JSON
-      return res.json({ cartCount: count });
+      return res.json({ 
+        success: true,
+        cartCount: count || 0
+      });
+      
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: 'Server error' });
     }
   });
+  
 
 // Checkout stub
 router.get('/checkout', (req, res) => {
