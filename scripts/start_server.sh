@@ -6,5 +6,11 @@ PROC_NAME=cs_vulnerablesiteproject
 
 cd "$APP_DIR"
 
-# Try restarting; if that fails, start it fresh
-pm2 restart "$PROC_NAME" || pm2 start app.js --name "$PROC_NAME"
+# 1) Remove any old PM2 processes with this name
+pm2 delete "$PROC_NAME" || true
+
+# 2) Start fresh under PM2
+pm2 start app.js --name "$PROC_NAME"
+
+# 3) Persist the new process list (optional)
+pm2 save
