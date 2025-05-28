@@ -4,11 +4,15 @@ files:
   - source: /
     destination: /home/ec2-user/CS_VulnerableSiteProject/
 hooks:
-  ApplicationStop:
-    - location: scripts/stop_server.sh
+  BeforeInstall:
+    - location: scripts/cleanup.sh
+      timeout: 300
+      runas: ec2-user
+  AfterInstall:
+    - location: scripts/install_dependencies.sh     # e.g. npm install, etc.
       timeout: 300
       runas: ec2-user
   ApplicationStart:
-    - location: scripts/start_server.sh
+    - location: scripts/start_server.sh               # your pm2 start cs_vulnerablesiteproject
       timeout: 300
       runas: ec2-user
