@@ -1,139 +1,234 @@
-# CyberShop
+# 🚀 CyberShop AWS Deployment
 
-A demo e-commerce web application built with **Node.js**, **Express**, and **EJS**, showcasing both **vulnerable** and **patched** implementations for educational penetration testing and security hardening.
-
----
-
-## 🏷️ Branches
-
-* **Patched**: Contains patched verson from intentional security flaws:
-
-  * SQL Injection on Sign-Up & Sign-In
-  * Reflected Cross-Site Scripting (XSS)
-  * Cross-Site Request Forgery (CSRF)
-  * Plain-text password storage, missing rate limits, and no security headers
-
-* **Vulnerable**: All vulnerabilities have been fixed:
-
-  * Parameterized SQL queries (`?` placeholders)
-  * Escaped template output (`<%= … %>`)
-  * CSRF tokens via `csurf` middleware
-  * Password hashing (bcrypt), rate limiting, session regeneration, and security headers via Helmet
+> A sample Node.js/Express web application deployed on AWS with best practices for security, scalability, elasticity, and cost-efficiency.
 
 ---
 
-## 📥 Getting Started
+## 📑 Table of Contents
 
-### Prerequisites
-
-* Node.js v16+ & npm
-* MySQL 8.0 (local or Docker)
-
-### Installation
-
-1. **Clone** this repo:
-
-   ```bash
-   git clone https://github.com/HazemBelal/CS_VulnerableSiteProject.git
-   cd CS_VulnerableSiteProject
-   ```
-
-2. **Checkout** the branch you want:
-
-   ```bash
-   # For vulnerable version
-   git checkout main
-
-   # Or for patched version
-   git checkout nonVulenrable
-   ```
-
-3. **Install** dependencies:
-
-   ```bash
-   npm install
-   ```
-
-4. **Configure** your database in `config.js` (default: MySQL at `localhost:3306`, user `cybershop`, password `cs288`).
-
-5. **Set up DB** (using Docker or native) and create the schema for example in docker:
-   ```bash
-   docker exec cyber-mysql mysql -ucybershop -pcs288 -D cybershop -e "
-   CREATE TABLE users (
-   id INT AUTO_INCREMENT PRIMARY KEY,
-   username VARCHAR(50) UNIQUE,
-   password VARCHAR(64),
-   email VARCHAR(100),
-   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
-   CREATE TABLE products (
-   id INT AUTO_INCREMENT PRIMARY KEY,
-   name VARCHAR(100),
-   description TEXT,
-   price DECIMAL(10,2),
-   image_path VARCHAR(255)
-   );
-   CREATE TABLE carts (
-   id INT AUTO_INCREMENT PRIMARY KEY,
-   user_id INT,
-   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-   FOREIGN KEY (user_id) REFERENCES users(id)
-   );
-   CREATE TABLE cart_items (
-   id INT AUTO_INCREMENT PRIMARY KEY,
-   cart_id INT,
-   product_id INT,
-   quantity INT,
-   FOREIGN KEY (cart_id) REFERENCES carts(id),
-   FOREIGN KEY (product_id) REFERENCES products(id)
-   );
-   "
-
-   ```
-
-6. **Start** the server:
-
-   ```bash
-   npm start
-   ```
-
-7. **Browse** to `http://localhost:3000`.
+1. [Project Overview](#project-overview)  
+2. [Architecture Summary](#architecture-summary)  
+3. [AWS Components & Services](#aws-components--services)  
+4. [Prerequisites](#prerequisites)  
+5. [Infrastructure Provisioning](#infrastructure-provisioning)  
+6. [Networking & Security](#networking--security)  
+7. [Application Deployment](#application-deployment)  
+8. [CI/CD Pipeline](#cicd-pipeline)  
+9. [High Availability & Auto Scaling](#high-availability--auto-scaling)  
+10. [Monitoring & Alerting](#monitoring--alerting)  
+11. [Cost Optimization](#cost-optimization)  
+12. [How to Access](#how-to-access)  
+13. [Further Improvements](#further-improvements)  
+14. [Contributing](#contributing)  
+15. [License](#license)  
 
 ---
 
-## 🔍 Testing Vulnerabilities
+## 📝 Project Overview
 
-### Vulnerable Branch
+**CyberShop** is a Node.js/Express web application deployed on AWS using best practices for security, scalability, elasticity, and cost-efficiency. This README documents:
 
-* **SQLi**: Attempt `admin' OR '1'='1` in Sign-In
-* **XSS**: Use `<script>alert(1)</script>` in username field
-* **CSRF**: Submit forms without tokens to see 403 bypass or silent state change
+- Core AWS infrastructure layout  
+- Networking and security configuration  
+- Deployment automation (CI/CD)  
+- Monitoring, alerting, and auto-scaling setup  
 
-### Patched Branch
+---
 
-* Confirm the above attempts fail:
+## 🏗 Architecture Summary
 
-  ```bash
-  curl -X POST http://localhost:3000/signin \
-       -d "username=admin' OR '1'='1&password=foo"
-  # Should return "Invalid credentials", not login
+```text
+┌───────────────────────────────┐          ┌───────────────┐
+│           VPC (10.0.0.0/16)      │       │   AWS Cloud   │
+│ ┌─────────┐  ┌─────────────┐     │       │    Services   │
+│ │ Pub-A   │  │ Pub-B       │     │       └───────────────┘
+│ │(IGW,NAT)│  │(ALB)        │     │
+│ └───┬─────┘  └───┬─────────┘     │                │
+│     │            │               │                ↓
+│ ┌───▼────────┐  ┌▼───────────┐   │         Users (HTTP)
+│ │App-A (10.0. │  │App-B (10.0│   │               ↑
+│ │.0.128/26)   │  │.0.192/26) │   │       ┌───────┴───────┐
+│ │ Node.js EC2 │  │ (ASG-enabled) │      │ Application    │
+│ └───┬────────┘  └────┬────────┘  │      │ Load Balancer  │
+│     │                 │          │      └───────────────┘
+│     │        ┌────────▼────────┐ │                │
+│     │        │    Amazon RDS   │ │                │
+│     │        │ (MySQL, private)│─┼────────────────┘
+│     │        └─────────────────┘ │
+│     │                            │
+│     └────────────────────────────┘
+```
+### 🛠 AWS Components & Services
+
+- **VPC & Subnets**  
+  - Public-A: `10.0.0.0/26`  
+  - Public-B: `10.0.0.64/26`  
+  - Private App-A: `10.0.0.128/26`  
+  - Private App-B: `10.0.0.192/26`  
+
+- **Internet Gateway (IGW)** & **NAT Gateway**
+
+- **Security Groups**  
+  - **SG-App**: allow HTTP (80) from ALB, SSH (22) from SG-NAT  
+  - **SG-DB**: allow MySQL (3306) from SG-App  
+  - **SG-NAT**: allow SSH (22) from your admin IP  
+
+- **EC2 Instances**  
+  - Bastion/NAT host (in Public-A)  
+  - App-A web server (in Private App-A)
+
+- **Application Load Balancer (ALB)**
+
+- **Amazon RDS (MySQL)** (in Private App-B)
+
+- **IAM Roles** for EC2, CodeBuild, CodeDeploy
+
+- **Systems Manager (SSM)** Agent for shellless access
+
+- **Auto Scaling Group (ASG)** spanning App-A & App-B
+
+- **CI/CD**: CodePipeline → CodeBuild → CodeDeploy
+
+- **Monitoring & Alerting**: CloudWatch metrics & alarms
+
+---
+
+### ✅ Prerequisites
+
+- AWS account & AWS CLI configured (`aws configure`)  
+- SSH key pairs for Bastion & App servers  
+- Local environment: Node.js & PM2 installed  
+
+---
+
+### 🏗 Infrastructure Provisioning
+
+1. **VPC & Subnets**  
+   - Create a `/16` VPC  
+   - Add the four subnets listed above
+
+2. **Internet & NAT**  
+   - Attach an Internet Gateway (IGW)  
+   - Launch a NAT Gateway in **Public-A**  
+   - Route private subnets’ Internet traffic through the NAT
+
+3. **Route Tables**  
+   - Public RT → IGW  
+   - Private RT → NAT
+
+4. **Security Groups**  
+   - Define **SG-App**, **SG-DB**, **SG-NAT** as above
+
+5. **EC2 Instances**  
+   - Launch a Bastion/NAT host in **Public-A**  
+   - Launch the App-A web server in **Private App-A**
+
+6. **RDS MySQL**  
+   - Deploy into **Private App-B**, with **no public access**
+
+---
+
+### 🚀 Application Deployment
+
+1. SSH into **App-A**, install Node.js & PM2  
+2. Deploy your code and update `config.js` with the RDS endpoint  
+3. Test, then **create an AMI** of App-A  
+4. Launch a second instance in **Private App-B** from that AMI  
+
+```bash
+# on each EC2 instance:
+pm2 delete all
+pm2 start app.js --name cyber-shop
+pm2 save
+pm2 startup
+```
+## 🔄 CI/CD Pipeline
+
+- **Source**: GitHub `Patched` branch (via AWS GitHub App)  
+- **Build**: AWS CodeBuild  
+  - Runtime: Node.js 20  
+  - Commands:  
+    ```bash
+    npm ci
+    npm test
+    ```  
+- **Deploy**: AWS CodeDeploy with lifecycle hooks
+
+```yaml
+# buildspec.yml
+version: 0.2
+
+runtime-versions:
+  nodejs: 20
+
+phases:
+  install:
+    commands:
+      - npm ci
+  build:
+    commands:
+      - npm test
+
+artifacts:
+  files:
+    - '**/*'
+```
+
+## 📈 High Availability & Auto Scaling
+
+**ASG** across App-A & App-B subnets: Min=1, Desired=1, Max=4
+
+**Target** Tracking CPU 50% (warm-up 300s)
+
+**Flow**: High load → ASG spins up new instance → ALB adds to target group → traffic evens out → CPU normalizes → ASG stabilizes.
+
+## 🔍 Monitoring & Alerting
+
+- **CloudWatch Metrics**  
+  - EC2: `CPUUtilization`  
+  - RDS: `FreeStorageSpace`  
+  - ALB: `RequestCount`  
+
+- **Alarms**  
+  - **EC2-High-CPU**: CPU > 75% for 5 minutes → SNS notification  
+  - **RDS-Low-Storage**: Free storage < 20% → SNS notification  
+
+---
+
+## 💰 Cost Optimization
+
+- Use **t3.micro** for EC2 & RDS (free-tier eligible)  
+- Evaluate **NAT Gateway** vs **NAT instance** based on traffic patterns  
+- Configure ASG **min = 0** when idle to save costs  
+
+---
+
+## 👀 How to Access
+
+- **Web UI**  
+  ```text
+  http://<ALB-DNS>.elb.amazonaws.com/
   ```
-* Ensure no script execution and 403 on missing CSRF.
+
+### SSH Access
+**Bastion Host:**
+```bash
+ssh -i bastion-key.pem ec2-user@<Elastic-IP>
+```
+
+##AWS Systems Manager (SSM)
+```bash
+aws ssm start-session --target <instance-id>
+```
 
 ---
 
-## 🛡️ Security Enhancements (Patched)
+## 🔧 Future Improvements
 
-* **SQL**: Parameterized queries using `mysql2`
-* **Templates**: Escaped output `<%= … %>`
-* **CSRF**: `csurf` middleware + hidden `_csrf` fields + `X-CSRF-Token` header
-* **Passwords**: Hashed with `bcrypt`
-* **Rate Limiting**: `express-rate-limit` on auth endpoints
-* **Sessions**: Regenerate session IDs on login
-* **Headers**: `helmet` for CSP, HSTS, X-Frame-Options, etc.
+ - Enable HTTPS via ACM on ALB
+ - Add RDS read-replicas for scaling
 
----
 
-## 📚 License
 
-MIT © Hazem Belal and Youssef Alaadin
+
+
