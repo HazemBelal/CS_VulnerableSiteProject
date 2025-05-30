@@ -19,8 +19,6 @@
 11. [Cost Optimization](#cost-optimization)  
 12. [How to Access](#how-to-access)  
 13. [Further Improvements](#further-improvements)  
-14. [Contributing](#contributing)  
-15. [License](#license)  
 
 ---
 
